@@ -7,21 +7,42 @@ def clean_seq(input_seq):
   return clean
 
 #Function to calculate nucleotide percentage.
-def nuc_freq(sequence, base, sig_figs=2):
+def nuc_freq(sequence, b1, b2):
 #Length of the sequence.
   length = len(sequence)
 #Count the number of nucleotides in sequence.
-  nuc_count = sequence.count(base)
-  nuc_freq = nuc_count/length
+  b1_count = sequence.count(b1)
+  b2_count = sequence.count(b2)
+  total_bases = b1_count + b2_count
+  b_perc = round(((total_bases/length)) *100, 2)
 #Return the frequency and length.
-  return (length, round(nuc_freq, sig_figs))
+  return (b_perc)
+
+#Function for creating the complementary strands.
+def complement(seq):
+  complement = (seq.replace("A", "t"))
+  complement = (complement.replace("C", "g"))
+  complement = (complement.replace("T", "a"))
+  complement = (complement.replace("G", "c"))
+  return complement.upper()
+
+#Function to isolate just the name of the gene we want.
+def snip_exon(gff_line):
+	break_1 = line.split('Gene')
+	break_2 = break_1[1].split(';')
+	exon = break_2[0].strip()
+	return exon
+
+# Our key is the feature type which includes all the sequences for that particular feature.
+feature_seq = {}
+# This is just the exon sequences for each feature (*cough* and maybe a little tRNA *cough*).
+exon_seq = {}
+# All the exons in the gene.
+gene_seq = {}
 
 #Load the system module.
 import sys
-
-print('This is the name of the script: ', sys.argv[0])
-print('Number of arguments: ', len(sys.argv))
-print('The arguments are: ', str(sys.argv))
+import collections
 
 #Set the name of the input file to be opened.
 fsa_file = sys.argv[1];
@@ -58,36 +79,50 @@ repeat = ''
 misc = ''
 
 for line in gff_in:
-    types = line.split('type ')
-    fields = line.split('\t')
-    type = fields[2]
-    start = int(fields[3])
-    stop = int(fields[4])
-    fragment = genome[start-1:stop]
-    fragment = clean_seq(fragment)
+	# gather full_seq on feature_types
+	full_seq = line.split("	")
+	feature = full_seq[2].strip()
+	start_here = int(full_seq[3]) - 1
+	strand = clean_seq(genome[start_here:int(full_seq[4])])
+	if feature in feature_seq:
+		feature_seq[feature] = feature_seq[feature] + strand
+	else:
+		feature_seq[feature] = strand
+	# create dictionary of exons and their sequences
+	full_seq = line.split("\t")
+	if full_seq[2].strip() == 'CDS':
+		exon = snip_exon(line)
+		start_here = int(full_seq[3]) - 1
+		strand = clean_seq(genome[start_here:int(full_seq[4])])
+		if full_seq[6].strip() == '-':
+			complement_strand = complement(strand)
+			exon_seq[exon] = complement_strand
+		else:
+			exon_seq[exon] = strand
 
-    if type == 'CDS':
-        cds += fragment
-    elif type == 'intron':
-        intron += fragment
-    elif type == 'tRNA':
-        tRNA += fragment
-    elif type == 'rRNA':
-        rRNA += fragment
-    elif type == 'misc_feature':
-        misc += fragment
-    elif type == 'repeat_region':
-        repeat += fragment
+#Exon dictionary
+exon_dict = collections.OrderedDict(sorted(exon_seq.items()))
 
-#Close the gff file.
-gff_in.close()
+#Build the exon
+for exon, sequence in exon_dict.items():
+	exon_bits = exon.split(' ')
+	if '-' in exon_bits[0]:
+		exon_bits = exon_bits[0].split('-')
+	if exon_bits[0] in gene_seq:
+		gene_seq[exon_bits[0]] += sequence
+	else:
+		gene_seq[exon_bits[0]] = sequence
 
-#Use our shiny new function instead of all that math we worked so hard on.
-types=["CDS", "rRNA", "tRNA", "Intron", "Misc","Repeats"]
-i=0
+# For-loop to get the features.
+for type, sequence in feature_seq.items():
+	GC_perc = nuc_freq(sequence, "C", "G")
+	type_perc = (len(sequence)/genome_len) * 100
+	output = "(" + str(round(type_perc, 1)) + "%)"
+	info_junk = "{0:15}{1:7} {2:7}{3:15}"
+	print(info_junk.format(type, len(sequence), output, GC_perc))
 
-for feature_type in [cds, rRNA, tRNA, intron, misc, repeat]:
-  for nucleotide in ['A','T','G','C']:
-    (feature_length, feature_comp) = nuc_freq(sequence=feature_type, base=nucleotide)
-    print(types[i] + "\t" + "length= " + str(feature_length) + "\t" + "and the percentage of " + nucleotide + "'s in this feature is " + str(feature_comp*100) + "%.")
-  i = i + 1
+print ("\n")
+
+#Make the sequences.
+for gene, sequence in gene_seq.items():
+	print(">" + gene + "\n" + sequence + "\n")
