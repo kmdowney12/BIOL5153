@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 
-#This script reads and parses collection data for a new ctenophore species.
+#A function to clean up DNA files
+def clean_seq(input_seq):
+  clean = input_seq.upper()
+  clean = clean.replace("N", "")
+  return clean
+
+#Function to calculate nucleotide percentage.
+def nuc_freq(sequence, base, sig_figs=2):
+#Length of the sequence.
+  length = len(sequence)
+#Count the number of nucleotides in sequence.
+  nuc_count = sequence.count(base)
+  nuc_freq = nuc_count/length
+#Return the frequency and length.
+  return (length, round(nuc_freq, sig_figs))
 
 #Load the system module.
 import sys
@@ -50,6 +64,7 @@ for line in gff_in:
     start = int(fields[3])
     stop = int(fields[4])
     fragment = genome[start-1:stop]
+    fragment = clean_seq(fragment)
 
     if type == 'CDS':
         cds += fragment
@@ -64,58 +79,15 @@ for line in gff_in:
     elif type == 'repeat_region':
         repeat += fragment
 
-# All the GC junk for CDS.
-CDS_len = len(cds)
-cds_g = cds.count('G')
-cds_c = cds.count('C')
-gc_cds = round((cds_g + cds_c) / CDS_len *100,2)
-cds_perc = round((CDS_len / genome_len) *100,1)
-
-# All the GC junk for introns.
-intron_len = len(intron)
-intron_g = intron.count('G')
-intron_c = intron.count('C')
-gc_intron = round((intron_g + intron_c) / intron_len *100,2)
-intron_perc = round((intron_len / genome_len) *100,1)
-
-# All the GC junk for tRNA.
-tRNA_len = len(tRNA)
-tRNA_g = tRNA.count('G')
-tRNA_c = tRNA.count('C')
-gc_tRNA = round((tRNA_g + tRNA_c) / tRNA_len *100,2)
-tRNA_perc = round((tRNA_len / genome_len) *100,1)
-
-# All the GC junk for rRNA.
-rRNA_len = len(rRNA)
-rRNA_g = rRNA.count('G')
-rRNA_c = rRNA.count('C')
-gc_rRNA = round((rRNA_g + rRNA_c) / rRNA_len *100,2)
-rRNA_perc = round((rRNA_len / genome_len) *100,1)
-
-# All the GC junk for repeat.
-repeat_len = len(repeat)
-repeat_g = repeat.count('G')
-repeat_c = repeat.count('C')
-gc_repeat = round((repeat_g + repeat_c) / repeat_len *100,2)
-repeat_perc = round((repeat_len / genome_len) *100,1)
-
-# All the GC junk for misc.
-misc_len = len(misc)
-misc_g = misc.count('G')
-misc_c = misc.count('C')
-gc_misc = round((misc_g + misc_c) / misc_len *100,2)
-misc_perc = round((misc_len / genome_len) *100,1)
-
 #Close the gff file.
 gff_in.close()
 
-print("exon              ", CDS_len, "(" + str(cds_perc) + "%)",'\t', gc_cds)
-print("intron            ", intron_len, "(" + str(intron_perc) + "%)",'\t', gc_intron)
-<<<<<<< HEAD
-print("misc_feature      ", misc_len, "(" + str(misc_perc) + "%)",'\t', gc_misc)
-=======
-print("misc_feature       ", misc_len, "(" + str(misc_perc) + "%)",'\t', gc_misc)
->>>>>>> 090cab1986a7c4414c0d84f20a20542d13397bb5
-print("repeat_region     ", repeat_len, "(" + str(repeat_perc) + "%)",'\t', gc_repeat)
-print("rRNA              ", rRNA_len," " "(" + str(rRNA_perc) + "%)",'\t', gc_rRNA)
-print("tRNA              ", tRNA_len," " "(" + str(tRNA_perc) + "%)",'\t', gc_tRNA)
+#Use our shiny new function instead of all that math we worked so hard on.
+types=["CDS", "rRNA", "tRNA", "Intron", "Misc","Repeats"]
+i=0
+
+for feature_type in [cds, rRNA, tRNA, intron, misc, repeat]:
+  for nucleotide in ['A','T','G','C']:
+    (feature_length, feature_comp) = nuc_freq(sequence=feature_type, base=nucleotide)
+    print(types[i] + "\t" + "length= " + str(feature_length) + "\t" + "and the percentage of " + nucleotide + "'s in this feature is " + str(feature_comp*100) + "%.")
+  i = i + 1
