@@ -5,14 +5,13 @@
 #Load the system module.
 import sys
 
+print('This is the name of the script: ', sys.argv[0])
+print('Number of arguments: ', len(sys.argv))
+print('The arguments are: ', str(sys.argv))
+
 #Set the name of the input file to be opened.
-<<<<<<< HEAD
-gff_file = "watermelon_files/watermelon.gff";
-fsa_file = "watermelon_files/watermelon.fsa";
-=======
-gff_file = "watermelon.gff";
-fsa_file = "watermelon.fsa";
->>>>>>> 090cab1986a7c4414c0d84f20a20542d13397bb5
+fsa_file = sys.argv[1];
+gff_file = sys.argv[2];
 
 #Open the file and read it in.
 gff_in = open(gff_file, 'r')
