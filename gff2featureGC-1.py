@@ -106,8 +106,6 @@ exon_dict = collections.OrderedDict(sorted(exon_seq.items()))
 #Build the exon
 for exon, sequence in exon_dict.items():
 	exon_bits = exon.split(' ')
-	if '-' in exon_bits[0]:
-		exon_bits = exon_bits[0].split('-')
 	if exon_bits[0] in gene_seq:
 		gene_seq[exon_bits[0]] += sequence
 	else:
